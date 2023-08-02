@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import WeatherCard from '@/components/WeatherCard.vue'
-import { useWeatherStore } from '@/store/weather'
+import { useWeatherStore } from './store/weather'
 
 const weatherStore = useWeatherStore()
 

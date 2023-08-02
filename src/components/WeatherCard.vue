@@ -1,18 +1,22 @@
 <script lang="ts" setup>
 import axios from "axios";
-import { onMounted, ref } from "vue";
+import { onMounted, onUnmounted, ref, watch } from "vue";
 import defaultCityPhoto from '@/assets/city.jpg';
-import { useWeatherStore } from '@/store/weather'
+import { useWeatherStore } from '../store/weather'
 
 const weatherStore = useWeatherStore()
 
 const props = defineProps({
-  city: { type: String, required: true }
+  city: { type: String, required: true },
+  interval: { type: Number, default: 10000 }
 })
 
 const cityPhotoUrl = ref<string>('');
 const temp = ref<string>('');
 const desc = ref<string>('');
+const counter = ref(props.interval / 1000);
+
+let timer: NodeJS.Timer;
 
 const getCityPhotoUrl = async (city: string) => {
   await axios.get(`https://api.teleport.org/api/urban_areas/slug:${city.toLocaleLowerCase()}/images/`)
@@ -45,11 +49,30 @@ const getCityWeather = async (city: string) => {
 onMounted(async () => {
   await getCityWeather(props.city)
   await getCityPhotoUrl(props.city)
+
+  timer = setInterval(() => {
+    counter.value--
+  }, 1000)
 })
+
+onUnmounted(() => {
+  clearInterval(timer)
+});
 
 const remove = () => {
   weatherStore.cities = weatherStore.cities.filter((m: string) => m !== props.city)
 }
+
+const refresh = async () => {
+  counter.value = props.interval / 1000
+  await getCityWeather(props.city)
+}
+
+watch(counter, async () => {
+  if (counter.value === 0) {
+    await refresh()
+  }
+})
 </script>
 
 <template>
@@ -57,6 +80,8 @@ const remove = () => {
     <template #header>
       <div class="h-15rem bg-cover text-right p-2" :style="{ backgroundImage: `url(${cityPhotoUrl})` }">
         <Button icon="pi pi-times" severity="danger" text rounded aria-label="Remove" @click="remove" />
+        <Button icon="pi pi-refresh" severity="success" text rounded aria-label="Refresh" @click="refresh" />
+
       </div>
     </template>
     <template #title>{{ city }}</template>
@@ -68,5 +93,7 @@ const remove = () => {
         {{ desc }}
       </p>
     </template>
+
+    <template #footer>{{ counter }}</template>
   </Card>
 </template>
